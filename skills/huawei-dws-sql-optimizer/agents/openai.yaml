@@ -1,0 +1,4 @@
+interface:
+  display_name: "Huawei DWS SQL Optimizer"
+  short_description: "Analyze slow Huawei DWS SQL with plans and tuning"
+  default_prompt: "Use $huawei-dws-sql-optimizer to analyze a Huawei DWS slow SQL query with its execution plan and return root causes plus actionable optimization SQL."
