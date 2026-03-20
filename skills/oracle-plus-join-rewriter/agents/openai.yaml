@@ -1,0 +1,4 @@
+interface:
+  display_name: "Oracle Join Rewriter"
+  short_description: "Rewrite Oracle joins safely."
+  default_prompt: "Rewrite Oracle legacy (+) outer joins into ANSI JOIN syntax, convert comma joins to INNER JOIN when result-set semantics are provably unchanged, keep unrelated SQL unchanged, and ask for confirmation when the rewrite may change the result set."
