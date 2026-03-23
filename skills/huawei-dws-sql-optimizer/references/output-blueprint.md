@@ -71,9 +71,18 @@ ON schema.table (equal_filter_col, join_or_order_col);
 EXPLAIN PERFORMANCE <optimized_sql>;
 ```
 
-### 4. 重分布/重建模板
+### 4. 修改分布键 / 重分布模板
 
 适用前提：核心瓶颈是 `REDISTRIBUTE`、`BROADCAST`、`GATHER` 或严重倾斜。
+
+默认优先给直接修改分布键模板：
+
+```sql
+ALTER TABLE schema.table
+DISTRIBUTE BY HASH (new_dist_key);
+```
+
+只有在用户同时需要改存储方式、分区、主键或其它表结构属性时，再给重建表模板：
 
 ```sql
 CREATE TABLE schema.table_new
@@ -84,7 +93,7 @@ FROM schema.table
 DISTRIBUTE BY HASH (new_dist_key);
 ```
 
-提示：如果用户未提供完整 DDL，只输出模板并标注“需确认表属性、主键、压缩、分区定义”。
+提示：如果用户未提供完整 DDL，只输出模板并标注“需确认表属性、主键、压缩、分区定义”；若只是单纯改分布键，优先建议 `ALTER TABLE ... DISTRIBUTE BY HASH (...)`，不要默认要求重建表。
 
 ### 5. 安全 SQL rewrite checklist
 
