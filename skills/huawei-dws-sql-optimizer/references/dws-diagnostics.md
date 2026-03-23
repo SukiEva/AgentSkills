@@ -10,7 +10,14 @@
 - 首选动作：
   1. 检查 JOIN 键是否与分布键一致。
   2. 检查是否可以改成 colocated join。
-  3. 如果是核心大表，优先建议重建表分布。
+  3. 默认优先建议直接修改分布键：
+
+```sql
+ALTER TABLE schema.table
+DISTRIBUTE BY HASH (new_dist_key);
+```
+
+  4. 只有在直接修改分布键不适用，或用户还要同时改存储/分区/表结构时，才建议 CTAS/重建表。
 - 不要默认动作：直接建议加索引。
 
 ### `Streaming (type: BROADCAST)`
@@ -38,7 +45,7 @@
 - 首选动作：
   1. 执行 `SELECT table_skewness('schema.table');`
   2. 检查分布键是否低基数、热点值集中、时间类字段偏斜。
-  3. 必要时建议更换分布键或通过 CTAS 重建表。
+  3. 必要时优先建议通过 `ALTER TABLE ... DISTRIBUTE BY HASH (...)` 更换分布键；只有附带其他结构性改造需求时再考虑 CTAS。
 
 ## 3. Scan symptoms
 

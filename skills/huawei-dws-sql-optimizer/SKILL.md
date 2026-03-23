@@ -42,19 +42,27 @@ EXPLAIN ANALYZE <sql>;
 ## 生成建议时的硬性规则
 
 - 只有在行存或高选择性场景证据充分时，才把 `CREATE INDEX` 放到高优先级。
-- 如果瓶颈来自重分布、Broadcast、Gather 或严重倾斜，优先建议调整分布键或重建表，而不是先加索引。
+- 如果瓶颈来自重分布、Broadcast、Gather 或严重倾斜，优先建议调整分布键，而不是先加索引；默认先给出 `ALTER TABLE <table> DISTRIBUTE BY HASH (<new_key>);` 方案，只有在 `ALTER TABLE` 不适用或用户存在额外表结构改造目标时，才退回到重建表方案。
 - SQL 改写必须默认保持语义不变；可能影响结果集时，明确写“需业务确认”。
 - 输出索引建议时必须写明：原因、字段顺序、SQL、收益、风险、验证方式。
-- 输出重分布建议时必须写明：哪张表、为什么当前分布不匹配、预期改善哪个 Streaming 节点、改造成本。
+- 输出重分布建议时必须写明：哪张表、为什么当前分布不匹配、优先使用 `ALTER TABLE ... DISTRIBUTE BY HASH (...)` 还是需要重建表、预期改善哪个 Streaming 节点、改造成本。
 - 如果只凭执行计划无法确认结论，必须把判断标记为“高概率推断”，并写出下一步验证命令。
 
 ## 参考资料加载策略
 
 - 需要补问信息、确定是否继续追问、控制分析顺序时，读取 `references/intake-and-decision-checklist.md`。
 - 需要 DWS 问题分类、症状与动作映射时，读取 `references/dws-diagnostics.md`。
+- 需要参考华为云 SQL 调优案例完整案例集（分布列、索引、JOIN 非空、不下推、`cost_param`、局部聚簇键、中间表存储、分区、`best_agg_plan`、剪枝干扰、`in-clause`、`partial cluster key`、`NOT IN` 改写）时，读取 `references/sql-tuning-case-patterns.md`。
 - 需要标准回复结构、索引模板、重分布模板、验证动作模板时，读取 `references/output-blueprint.md`。
 - 需要快速提取超长执行计划中的 Streaming / skew / scan 线索时，运行 `scripts/extract_dws_signals.py`。
 - 需要交付报告模板时，复用 `assets/slow-sql-report-template.md`。
+
+### 案例模式使用规则
+
+- 当执行计划出现大规模 `REDISTRIBUTE` / `BROADCAST` / `GATHER`，优先结合案例中的“选择合适的分布列”与“调整中间表存储方式”模式判断是否需要改分布或改中间结果承载方式。
+- 当瓶颈集中在过滤不下推、分区未裁剪、表达式破坏谓词、`IN` / `NOT IN` 子查询时，优先结合案例中的“不下推整改”“排除剪枝干扰”“消除 in-clause”“NOT IN 转 NOT EXISTS”模式给出 rewrite 建议。
+- 当排序、聚合、窗口、局部有序访问成为主要热点时，优先结合“调整局部聚簇键”“使用 partial cluster key”“best_agg_plan”案例判断是否应先做存储布局或 GUC 验证，而不是直接建索引。
+- 当索引建议来自案例经验而不是当前计划的直接证据时，必须标注为“经验性候选方案”，并补充适用前提与回归验证方式。
 
 ## 输出要求
 
