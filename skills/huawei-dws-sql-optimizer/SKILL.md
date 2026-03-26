@@ -1,20 +1,113 @@
 ---
 name: huawei-dws-sql-optimizer
-description: Analyze slow SQL on Huawei DWS (GaussDB/DWS) using the raw SQL text plus EXPLAIN, EXPLAIN ANALYZE, or EXPLAIN PERFORMANCE output. Use when the user wants root-cause analysis and concrete optimization actions for DWS, including CREATE INDEX statements, ANALYZE, partition-pruning fixes, distribution-key redesign, skew diagnosis, broadcast/redistribute reduction, collocated join advice, safe SQL rewrites, or a structured slow-SQL investigation report.
+description: Analyze and optimize slow SQL on Huawei DWS (GaussDB/DWS) with an evidence-first workflow. Proactively use MCP to collect schema/index/statistics/distribution metadata and validate plans (EXPLAIN PERFORMANCE/ANALYZE/EXPLAIN), then provide root-cause analysis, prioritized actions, executable SQL, risk notes, and verification steps.
 ---
 
 # Huawei DWS SQL Optimizer
 
 分析华为 DWS 慢 SQL 时按以下流程执行，并始终保持“证据 -> 推断 -> 建议 -> 验证”的链路清晰。
 
-## Quick start
+## 适用范围
 
-1. 收集原始 SQL。
-2. 收集执行计划，优先级：`EXPLAIN PERFORMANCE` > `EXPLAIN ANALYZE` > `EXPLAIN`。
-3. 读取 `references/intake-and-decision-checklist.md`，只补问缺失且会影响判断的信息。
-4. 如果执行计划很长，先运行 `scripts/extract_dws_signals.py` 生成提要；必要时使用 `--json` 供后续结构化整理。
-5. 先判断是否为分布式问题，再判断扫描、JOIN、聚合/排序，最后才判断是否建议索引。
-6. 按统一输出模板给出结论、证据、优化动作、可执行 SQL、风险、验证方式与待确认项。
+### 适用
+
+- 用户要分析 DWS/GaussDB 慢 SQL 根因并拿到可执行优化动作；
+- 用户已有 SQL 或执行计划，希望快速给出优先级建议；
+- 用户需要结构化慢 SQL 报告（结论、证据、动作、风险、验证）。
+
+### 不适用（需先澄清）
+
+- 非 DWS/GaussDB 方言或纯应用层瓶颈（网络、连接池、并发限流）；
+- 用户只要“泛泛调优建议”且不提供 SQL/计划；
+- 需要直接执行高风险 DDL/DML（本技能默认只读分析 + `EXPLAIN*` 验证）。
+
+## Quick start（7 步）
+
+1. 收集原始 SQL（无 SQL 时仅做方法级建议）。
+2. 探测 MCP 是否可用；可用则先自主取证，不可用再向用户索取。
+3. 获取执行计划，优先级：`EXPLAIN PERFORMANCE` > `EXPLAIN ANALYZE` > `EXPLAIN`。
+4. 读取 `references/intake-and-decision-checklist.md`，仅补问会阻断判断的缺口。
+5. 执行计划过长时运行 `scripts/extract_dws_signals.py` 先抽取热点。
+6. 按“分布式传输 -> 倾斜 -> 扫描过滤 -> JOIN -> 聚合排序 -> 索引”顺序分析。
+7. 按 `references/output-blueprint.md` 输出：结论、证据、动作、SQL、风险、验证、待确认项。
+
+## 执行模式选择
+
+- **Mode A（MCP-first）**：能访问 MCP 时默认使用。先自主取证，再最小补问。
+- **Mode B（User-evidence）**：MCP 不可用时，基于用户提供 SQL/计划/DDL 分析。
+- **Mode C（Plan-only）**：仅有执行计划时，允许输出“高概率推断”，但必须附最小补充清单。
+
+## MCP 自主探查模式（默认启用）
+
+当 MCP 可用时，必须先走“自主取证”再决定是否追问用户。
+
+### A. 资源发现
+
+1. 使用 MCP 资源发现能力列出可用资源/模板。
+2. 优先选择与 DWS / GaussDB / PostgreSQL 系统目录、SQL 执行、执行计划相关的资源。
+3. 若存在多个连接，默认选择与用户 SQL 所在库最匹配的连接（库名/Schema/方言最接近）。
+
+### B. 元数据取证
+
+对 SQL 涉及对象按需收集：
+
+- 表/视图 DDL；
+- 索引定义（列顺序、类型、可用状态）；
+- 分布键、分区定义、存储方式（行存/列存）；
+- 统计信息（行数估计、统计时间、列基数信息）。
+
+优先复用 `references/dws-metadata-sql-snippets.md` 的查询模板。
+
+### C. 执行计划验证
+
+对“原 SQL”先执行：`EXPLAIN PERFORMANCE`；失败再降级：
+
+1. `EXPLAIN ANALYZE`
+2. `EXPLAIN`
+
+如果给出 rewrite，必须用 `EXPLAIN*` 对比“原 SQL vs rewrite SQL”，禁止直接执行真实 DML 验证。
+
+### D. 失败降级与补问
+
+遇到权限/连接/对象缺失时，按固定格式输出：
+
+- 缺失项（具体到对象/字段）；
+- 对结论影响（哪些结论降级为“高概率推断”）；
+- 最小补充清单（最多 3 条，且可直接执行）。
+
+### E. 安全边界（强约束）
+
+- 禁止执行任何改写业务数据的语句；
+- 禁止执行不可逆 DDL；
+- 默认只读 + `EXPLAIN*`；
+- 所有 MCP 拉取内容需在结果中标记“已验证证据（MCP）”。
+
+## 输出质量门槛（必须满足）
+
+1. 每个根因必须有证据，不允许“无证据结论”。
+2. 每条建议必须给“收益 + 风险 + 验证动作”。
+3. 至少给 1 条可立即执行的低风险动作（例如 `ANALYZE`、`EXPLAIN*` 对比、SARGable rewrite）。
+4. 涉及语义变化的 rewrite 必须标注“需业务确认”。
+5. 结论必须区分“确定”与“高概率推断”。
+
+## 调优实验闭环（新增）
+
+每次优化都按“基线 -> 变更 -> 复测 -> 回滚预案”输出：
+
+1. 基线：记录原 SQL 的总耗时、最重节点、扫描行数、Streaming 开销。
+2. 变更：每次只改一类变量（索引 / 分布键 / rewrite / 参数），避免多变量混改。
+3. 复测：至少执行一次 `EXPLAIN*` 对比，必要时做小流量真实压测。
+4. 回滚：给出撤销语句或回退步骤（删索引、恢复参数、回切 SQL）。
+
+## 常见 SQL 反模式速查（新增）
+
+在建议 rewrite 前，优先检查以下反模式：
+
+- `SELECT *` 导致无效列回传；
+- 过滤列函数包裹，破坏下推/索引命中；
+- 隐式类型转换导致计划偏差；
+- 大 `IN (...)` / 深层子查询造成优化复杂度飙升；
+- 可提前过滤却放在后置层（例如外层再过滤）。
 
 ## 必需输入缺失时的处理
 
@@ -51,7 +144,11 @@ EXPLAIN ANALYZE <sql>;
 ## 参考资料加载策略
 
 - 需要补问信息、确定是否继续追问、控制分析顺序时，读取 `references/intake-and-decision-checklist.md`。
+- 需要按 MCP 自主探查数据库对象、索引与执行计划时，读取 `references/mcp-autodiscovery-playbook.md`。
+- 需要系统表查询模板（DDL、索引、统计信息、分布/分区、计划验证）时，读取 `references/dws-metadata-sql-snippets.md`。
 - 需要 DWS 问题分类、症状与动作映射时，读取 `references/dws-diagnostics.md`。
+- 需要通用调优方法论（定位->改写->结构->参数）时，读取 `references/sql-tuning-methodology.md`。
+- 需要 SQL 反模式与 rewrite 优先级建议时，读取 `references/sql-rewrite-anti-patterns.md`。
 - 需要参考华为云 SQL 调优案例完整案例集（分布列、索引、JOIN 非空、不下推、`cost_param`、局部聚簇键、中间表存储、分区、`best_agg_plan`、剪枝干扰、`in-clause`、`partial cluster key`、`NOT IN` 改写）时，读取 `references/sql-tuning-case-patterns.md`。
 - 需要标准回复结构、索引模板、重分布模板、验证动作模板时，读取 `references/output-blueprint.md`。
 - 需要快速提取超长执行计划中的 Streaming / skew / scan 线索时，运行 `scripts/extract_dws_signals.py`。
@@ -83,3 +180,4 @@ EXPLAIN ANALYZE <sql>;
 - 不要只说“SQL 慢”；要明确慢在扫描、传输、JOIN、聚合、排序还是统计信息。
 - 优先给用户可立即执行的下一步。
 - 如果已有提取脚本输出，先引用脚本中发现的热点，再展开人工分析。
+- 建议默认按“高 / 中 / 低”优先级分组，避免平铺罗列。
