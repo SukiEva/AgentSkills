@@ -1,0 +1,16 @@
+{
+  "source": {
+    "type": "filesystem",
+    "path": "src/dws_mcp_server/server.py",
+    "entrypoint": "mcp"
+  },
+  "environment": {
+    "type": "uv",
+    "python": ">=3.10,<3.13",
+    "project": "."
+  },
+  "deployment": {
+    "transport": "stdio",
+    "log_level": "INFO"
+  }
+}

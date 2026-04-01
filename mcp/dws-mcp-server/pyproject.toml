@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dws-mcp-server"
+version = "0.1.0"
+description = "基于 FastMCP 的华为云 DWS 元数据与诊断 MCP Server"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+authors = [
+  { name = "Codex" }
+]
+dependencies = [
+  "fastmcp>=2.2.0,<3.0.0",
+  "psycopg[binary]>=3.2.0,<4.0.0",
+]
+
+[project.scripts]
+dws-mcp-server = "dws_mcp_server.server:main"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dws_mcp_server"]
