@@ -1,0 +1,4 @@
+interface:
+  display_name: "DWS SQL Optimizer"
+  short_description: "使用 dws-mcp-server 优先做 DWS 慢 SQL 自主诊断与调优"
+  default_prompt: "Use $dws-sql-optimizer to diagnose and optimize Huawei DWS slow SQL with a dws-mcp-server-first workflow: probe the connection, collect EXPLAIN/DDL/index/storage evidence, analyze redistribution/skew/scan/join/sort bottlenecks, and output prioritized actions with risks, rollback, and verification."

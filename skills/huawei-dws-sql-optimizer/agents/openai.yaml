@@ -1,4 +1,0 @@
-interface:
-  display_name: "Huawei DWS SQL Optimizer"
-  short_description: "End-to-end DWS slow SQL diagnosis and tuning"
-  default_prompt: "Use $huawei-dws-sql-optimizer to perform end-to-end Huawei DWS slow SQL optimization with a full methodology: triage bottlenecks, apply rewrite-first tuning, evaluate structure changes (index/distribution/partition), gather evidence (MCP if available), and output prioritized actions with risks, rollback, and EXPLAIN-based verification."

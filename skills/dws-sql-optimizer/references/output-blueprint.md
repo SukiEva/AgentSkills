@@ -16,8 +16,9 @@
 - 是否存在分布式传输：有 / 无
 - 是否怀疑数据倾斜：高 / 中 / 低
 
-### 2.1 MCP 取证摘要（如可用）
-- 连接/资源：...
+### 2.1 dws-mcp-server 取证摘要（如可用）
+- 连接状态：成功 / 失败
+- 已调用工具：`ping` / `explain_sql` / `analyze_table_structure` / `analyze_table_indexes` / `analyze_table_storage` / `get_table_ddl`
 - 已获取证据：DDL / 索引 / 统计信息 / 执行计划
 - 缺失证据：...
 - 对结论影响：确定 / 高概率推断
@@ -138,10 +139,10 @@ DISTRIBUTE BY HASH (new_dist_key);
 4. 看总耗时是否改善。
 5. 如果是索引方案，看写入代价是否可接受。
 
-## MCP-first output requirements
+## dws-mcp-server-first output requirements
 
-若 MCP 可用，输出中需明确标记：
+若 `dws-mcp-server` 可用，输出中需明确标记：
 
-1. 哪些结论来自“已验证证据（MCP）”。
+1. 哪些结论来自“已验证证据（dws-mcp-server）”。
 2. 哪些结论为“高概率推断（证据缺失）”。
 3. 每个建议对应的 `EXPLAIN*` 验证动作。

@@ -12,7 +12,7 @@
 - 是否怀疑数据倾斜：{{skew_level}}
 
 ### 2.1 证据来源摘要
-- MCP 已验证证据：{{mcp_verified_evidence}}
+- dws-mcp-server 已验证证据：{{mcp_verified_evidence}}
 - 用户提供证据：{{user_provided_evidence}}
 - 缺失证据：{{missing_evidence}}
 - 结论可信度：{{certainty_overview}}

@@ -1,6 +1,6 @@
-# DWS metadata SQL snippets (MCP)
+# DWS metadata SQL snippets (`execute_sql` fallback)
 
-以下模板用于 MCP 执行 SQL 时快速补齐证据。按实际版本/权限做字段兼容调整。
+以下模板用于 `dws-mcp-server` 的 `execute_sql` 在高层诊断工具信息不足时快速补齐证据。按实际版本/权限做字段兼容调整。
 
 ## 1) 表定义 / 存储方式
 
