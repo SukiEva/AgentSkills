@@ -9,11 +9,11 @@ from typing import Any, Generator, Optional
 from dws_mcp_server.config import DwsMcpSettings
 
 try:
-    import psycopg
-    from psycopg.rows import dict_row
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
 except ImportError:  # pragma: no cover - 依赖未安装时用于更友好的报错
-    psycopg = None
-    dict_row = None
+    psycopg2 = None
+    RealDictCursor = None
 
 
 MUTATING_PREFIXES = {
@@ -103,16 +103,16 @@ class DwsDatabase:
         self.settings = settings
 
     def _ensure_driver(self) -> None:
-        if psycopg is None or dict_row is None:
+        if psycopg2 is None or RealDictCursor is None:
             raise RuntimeError(
-                "未安装 psycopg。请先在 mcp/dws-mcp-server 目录执行 `uv sync`。"
+                "未安装 psycopg2-binary。请先在 mcp/dws-mcp-server 目录执行 `uv sync`。"
             )
 
     @contextmanager
     def connect(self) -> Generator[Any, None, None]:
         self._ensure_driver()
 
-        connection = psycopg.connect(
+        connection = psycopg2.connect(
             host=self.settings.host,
             port=self.settings.port,
             dbname=self.settings.database,
@@ -121,7 +121,6 @@ class DwsDatabase:
             sslmode=self.settings.sslmode,
             connect_timeout=self.settings.connect_timeout,
             application_name=self.settings.app_name,
-            row_factory=dict_row,
         )
         connection.autocommit = True
         try:
@@ -139,7 +138,7 @@ class DwsDatabase:
         sql_text: str,
         params: Optional[tuple[Any, ...]] = None,
     ) -> list[dict[str, Any]]:
-        with self.connect() as connection, connection.cursor() as cursor:
+        with self.connect() as connection, connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(sql_text, params or ())
             rows = cursor.fetchall()
         return _to_jsonable(rows)
@@ -149,7 +148,7 @@ class DwsDatabase:
         sql_text: str,
         params: Optional[tuple[Any, ...]] = None,
     ) -> Optional[dict[str, Any]]:
-        with self.connect() as connection, connection.cursor() as cursor:
+        with self.connect() as connection, connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(sql_text, params or ())
             row = cursor.fetchone()
         if row is None:
@@ -171,11 +170,11 @@ class DwsDatabase:
                 "`DWS_ALLOW_MUTATION=true` 并在工具入参中传入 `allow_mutation=true`。"
             )
 
-        with self.connect() as connection, connection.cursor() as cursor:
+        with self.connect() as connection, connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(sql_text)
 
             if cursor.description:
-                columns = [column.name for column in cursor.description]
+                columns = [column[0] for column in cursor.description]
                 rows = cursor.fetchmany(effective_limit + 1)
                 truncated = len(rows) > effective_limit
                 if truncated:
