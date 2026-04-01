@@ -6,7 +6,7 @@ from decimal import Decimal
 import re
 from typing import Any, Generator, Optional
 
-from .config import DwsMcpSettings
+from dws_mcp_server.config import DwsMcpSettings
 
 try:
     import psycopg

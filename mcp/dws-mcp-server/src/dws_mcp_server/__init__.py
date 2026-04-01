@@ -1,5 +1,5 @@
 """DWS FastMCP Server."""
 
-from .server import main
+from dws_mcp_server.server import main
 
 __all__ = ["main"]

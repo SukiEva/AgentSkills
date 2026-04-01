@@ -4,8 +4,8 @@ from collections import defaultdict
 import re
 from typing import Any, Optional
 
-from .database import DwsDatabase, classify_sql
-from .queries import (
+from dws_mcp_server.database import DwsDatabase, classify_sql
+from dws_mcp_server.queries import (
     LIST_SCHEMAS_SQL,
     LIST_TABLES_SQL,
     PING_SQL,

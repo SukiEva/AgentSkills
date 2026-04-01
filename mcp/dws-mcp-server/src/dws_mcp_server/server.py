@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import sys
+from pathlib import Path
 from typing import Any, Optional
 
-from .config import DwsMcpSettings
-from .database import DwsDatabase
-from .service import DwsMcpService
+
+SRC_ROOT = Path(__file__).resolve().parents[1]
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from dws_mcp_server.config import DwsMcpSettings
+from dws_mcp_server.database import DwsDatabase
+from dws_mcp_server.service import DwsMcpService
 
 try:
     from fastmcp import FastMCP
